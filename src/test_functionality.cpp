@@ -43,14 +43,17 @@ int main()
     std::random_device dev;
     std::mt19937 generator(dev());
     std::uniform_real_distribution<double> dis(1.0, 2.0);
-    std::uniform_real_distribution<double> dis_3d(-3.0, 3.0);
+    std::uniform_real_distribution<double> dis_3d(-2.0, 2.0);
 
     bspline_trajectory nb;
 
-    int cp_size = 10;
+    int order = 3;
+    int k = order+1;
 
-    int order = 2;
-    int time_point_size = cp_size + order;
+    /** @brief Key components cp_size and time_point_size relationship **/
+    int cp_size = 10;
+    int time_point_size = cp_size + order - 1;
+
     if (time_point_size < 0)
         return -1;
 
@@ -63,8 +66,8 @@ int main()
     std::cout << " " << t_s;
     for (int i = 1; i < time_point_size; i++)
     {
-        // t_s += dis(generator);
-        t_s += 1.0;
+        t_s += dis(generator);
+        // t_s += 1.0;
         t.push_back(t_s);
         std::cout << " " << t_s;
     }
@@ -108,14 +111,27 @@ int main()
     std::cout << "check_query_time " << KGRN << t_cqt << "ms" << KNRM << std::endl;
 
 
+    if (!nb.check_query_time(t, 0.001, t_i, time_index_offset))
+    {
+        std::cout << "check_query_time fail, query time not inside time vector" << std::endl;
+        return -1;
+    }
     /** @brief testing create_general_m, creation of the M matrix representing the basis of the spline**/
     time_point<std::chrono::system_clock> t_s_cgm = system_clock::now();
-    Eigen::MatrixXd m = nb.create_general_m(order, t);
+    vector<double> time_trim;
+    std::cout << "time_trim vector test";
+    for (int i = 0; i < k + (order-1); i++)
+    {
+        time_trim.push_back(t[time_index_offset+i]);
+        std::cout << " " << t[time_index_offset+i];
+    }
+    std::cout << std::endl;
+    Eigen::MatrixXd m = nb.create_general_m(order, time_trim);
     auto t_cgm = duration<double>(system_clock::now() - t_s_cgm).count() * 1000;
     std::cout << "create_general_m " << KGRN << t_cgm << "ms" << KNRM << std::endl;
     std::cout << m << std::endl;
 
-    t_s = t[(cp_size-1)-1];
+    t_s = t[(cp_size-1)-(order-1)];
     std::cout << "total nbspline time: " << KYEL << t_s << "s" << KNRM << std::endl;
     std::pair<vector<double>,vector<double>> one_d_pos_time; // 1d position vector with time
     vector<double> one_d_vel, one_d_acc;
@@ -144,7 +160,8 @@ int main()
     plt::plot(one_d_pos_time.first, one_d_vel, "r--");
     plt::plot(one_d_pos_time.first, one_d_acc, "y--");
     
-    plt::title("non-uniform-bspline"); // add graph title
+    string title = std::to_string(order) + " order non-uniform-bspline";
+    plt::title(title); // add graph title
     plt::show();
 
     return 0;

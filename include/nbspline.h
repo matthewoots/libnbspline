@@ -86,9 +86,6 @@ namespace nbspline
         inline Eigen::MatrixXd create_general_m(int order, vector<double> t)
         {
             int k = order + 1;
-            // According to the paper only able to calculate to order 3
-            if (k > 4)
-                k = 4;
             
             Eigen::MatrixXd M = Eigen::MatrixXd::Zero(k,k);
 
@@ -119,8 +116,7 @@ namespace nbspline
                 case 4:
                     M(0,0) = pow((t[3] - t[2]),2) / ((t[3] - t[1]) * (t[3] - t[0]));
                     M(0,2) = pow((t[2] - t[1]),2) / ((t[4] - t[1]) * (t[3] - t[1]));
-                    // M(0,1) = 1 - M(0,0) - M(0,2);
-                    M(0,1) = 4.0/6.0;
+                    M(0,1) = 1 - M(0,0) - M(0,2);
                     M(0,3) = 0.0;
                     
                     M(1,0) = -3 * M(0,0);
@@ -129,12 +125,12 @@ namespace nbspline
                     M(1,3) = 0.0;
 
                     M(2,0) = 3 * M(0,0);
-                    M(2,2) = 3 * (t[3] - t[2]) / ((t[4] - t[1]) * (t[3] - t[1]));
+                    M(2,2) = 3 * pow((t[3] - t[2]),2) / ((t[4] - t[1]) * (t[3] - t[1]));
                     M(2,1) = -3 * M(0,0) - M(2,2);
                     M(2,3) = 0.0;
 
                     M(3,3) = pow((t[3] - t[2]),2) / ((t[5] - t[2]) * (t[4] - t[2]));
-                    M(3,2) = - M(2,2) / 3 - M(3,3) - pow((t[3] - t[2]),2) / ((t[4] - t[2]) * (t[4] - t[1]));
+                    M(3,2) = -(M(2,2) / 3) - M(3,3) - pow((t[3] - t[2]),2) / ((t[4] - t[2]) * (t[4] - t[1]));
                     M(3,0) = - M(0,0);
                     M(3,1) = M(0,0) - M(3,2) - M(3,3);
                     break;
@@ -150,8 +146,8 @@ namespace nbspline
             for (int i = 0; i < (int)time.size()-1; i++)
             {
                 // Only considering [0,1) hence not including 1
-                if (time[i+1] - query > 0 && query - time[i] >= 0)
-                // if (time[i+1] - query > 0)
+                // if (time[i+1] - query > 0 && query - time[i] >= 0)
+                if (time[i+1] - query > 0)
                 {
                     t_i.first = time[i];
                     t_i.second = time[i+1];
@@ -173,23 +169,28 @@ namespace nbspline
             vector<double> cp, double query_time)
         {
             nbs_pva_state_1d s;
+            // According to the paper only able to calculate to order 3
+            if (order > 3)
+                return s;
             
             std::pair<double,double> t_i;
             int time_index_offset = 0;
             if (!check_query_time(time, query_time, t_i, time_index_offset))
                 return s;
-            std::cout << "time_index_offset {" << time_index_offset
-                << "} t_i {" << t_i.first << " " << t_i.second << "}" << std::endl;
+            // std::cout << "time_index_offset {" << time_index_offset
+            //     << "} t_i {" << t_i.first << " " << t_i.second << "}" << std::endl;
 
             int k = order + 1;
             vector<double> time_trim;
-            for (int i = 0; i < k+1; i++)
+            // std::cout << "time_trim vector";
+            for (int i = 0; i < k+(order-1); i++)
+            {
                 time_trim.push_back(time[time_index_offset+i]);
+                // std::cout << " " << time[time_index_offset+i];
+            }
+            // std::cout << std::endl;
 
             Eigen::MatrixXd M = create_general_m(order, time_trim);
-            
-            // int n = (int)cp.size() - 1;
-            // int m = n + order + 1; 
 
             // Only considering [0,1) hence not including 1
             double u_t = (query_time - t_i.first) / (t_i.second - t_i.first);
@@ -201,15 +202,18 @@ namespace nbspline
             u = du = ddu = Eigen::RowVectorXd::Zero(k); 
 
             // Make the u, du, ddu and p matrix
+            // std::cout << "P vector";
             for (int l = 0; l < k; l++)
             {
                 u(l) = pow(u_t, l);
                 p(l) = cp[time_index_offset + l];
+                // std::cout << " " << p(l);
                 if (l >= 1)
                     du(l) = (l) * pow(u_t, l-1);
                 if (l >= 2)
                     ddu(l) = (l) * (l-1) * pow(u_t, l-2);
             }
+            // std::cout << std::endl;
 
             s.pos = position_at_time_segment(M, u, p);
             s.vel = velocity_at_time_segment(M, du, p);
