@@ -55,17 +55,24 @@ namespace nbspline
         struct nbs_pva_state_1d
         {
             double rts; // time 
-            double pos; // Position vector 1d
-            double vel; // Velocity vector 1d
-            double acc; // Acceleration vector 1d
+            double pos; // position vector 1d
+            double vel; // velocity vector 1d
+            double acc; // acceleration vector 1d
         };
 
         struct nbs_pva_state_3d
         {
-            vector<double> rts; // Relative time vector
-            vector<Eigen::Vector3d> pos; // Position vector 3d
-            vector<Eigen::Vector3d> vel; // Velocity vector 3d
-            vector<Eigen::Vector3d> acc; // Acceleration vector 3d
+            double rts; // time
+            Eigen::Vector3d pos; // position 3d
+            Eigen::Vector3d vel; // velocity 3d
+            Eigen::Vector3d acc; // acceleration 3d
+        };
+
+        struct row_vector_3d
+        {
+            vector<double> xcp; // x control point
+            vector<double> ycp; // y control point
+            vector<double> zcp; // z control point
         };
 
         /** @brief Create the range of values within the array of index **/
@@ -159,10 +166,8 @@ namespace nbspline
             return false;
         }
 
-        /** @brief Create the pva state of a 1d non-uniform bspline 
-         * @param time size is order + 2
-         * @param cp size is order + 1
-         * @param query_time double time that is queried
+        /** @brief Create the pva state of a 1d non-uniform bspline
+         *  This is 1 pass function, does not calculate more that 1 instance in the bspline 
         **/
         inline nbs_pva_state_1d get_nbspline_1d(
             int order, vector<double> time, 
@@ -222,6 +227,39 @@ namespace nbspline
 
             return s;
 
+        }
+
+        /** @brief Create the pva state of a 3d non-uniform bspline
+         *  This is 1 pass function, does not calculate more that 1 instance in the bspline 
+        **/
+        inline nbs_pva_state_3d get_nbspline_3d(
+            int order, vector<double> time, 
+            vector<Eigen::Vector3d> cp, double query_time)
+        {
+            nbs_pva_state_3d ss;
+            ss.rts = query_time;
+
+            row_vector_3d rv;
+            // Reorganize the control points into vectors that can be passed into 1d_bspline function
+            for (int i = 0; i < (int)cp.size(); i++)
+            {
+                rv.xcp.push_back(cp[i].x());
+                rv.ycp.push_back(cp[i].y());
+                rv.zcp.push_back(cp[i].z());
+            }
+
+            nbs_pva_state_1d x = get_nbspline_1d(
+                order, time, rv.xcp, query_time);
+            nbs_pva_state_1d y = get_nbspline_1d(
+                order, time, rv.ycp, query_time);
+            nbs_pva_state_1d z = get_nbspline_1d(
+                order, time, rv.zcp, query_time);
+
+            ss.pos = Eigen::Vector3d(x.pos, y.pos, z.pos);
+            ss.vel = Eigen::Vector3d(x.vel, y.vel, z.vel);
+            ss.acc = Eigen::Vector3d(x.acc, y.acc, z.acc);
+
+            return ss;
         }
 
         /** @brief 

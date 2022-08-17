@@ -3,9 +3,9 @@
 ## Introduction
 libnbspline is a header only library, several test examples are compiled using CMake. Libnbspline aims to provide a library that accepts non-uniform knot vector unlike uniform bsplines with a fixed knot interval.
 
-| |
-| :-: |
-|[<img src="3rd_order_nbspline.png" width="750"/>](3rd_order_nbspline.png)|
+| | |
+| :-: | :-: |
+|[<img src="3rd_order_1d_nbspline.png" width="600"/>](3rd_order_1d_nbspline.png)|[<img src="3rd_order_3d_nbspline.png" width="600"/>](3rd_order_3d_nbspline.png)|
 
 ---
 
@@ -21,7 +21,9 @@ make
 ---
 
 ## Run functionality check and brief of the algorithm and code
-Run `./functionality` in the `build` folder to test the performance and speed without going through the ctest checks
+`ctest make` will run `functionality_1d` to show whether functionality for 1 dimension bspline is valid
+- Run `./functionality_1d` in the `build` folder to test the performance for **1D** without going through the ctest checks
+- Run `./functionality_3d` in the `build` folder to test the performance for **3D** and plots out the positions in the 3 axis
 ```bash
 # Time vector represents the ascending time vector (size = cp_size + order - 1)
 # Control point vector is defined by a clamped vector (order*start_cp ... order*end_cp)

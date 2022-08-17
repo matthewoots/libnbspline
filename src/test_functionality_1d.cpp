@@ -1,5 +1,5 @@
 /*
-* test_functionality.hpp
+* test_functionality_1d.hpp
 *
 * ---------------------------------------------------------------------
 * Copyright (C) 2022 Matthew (matthewoots at gmail.com)
@@ -42,8 +42,8 @@ int main()
 {
     std::random_device dev;
     std::mt19937 generator(dev());
-    std::uniform_real_distribution<double> dis(1.0, 2.0);
-    std::uniform_real_distribution<double> dis_3d(-2.0, 2.0);
+    std::uniform_real_distribution<double> dis(1.0, 3.0);
+    std::uniform_real_distribution<double> dis_1d(-2.0, 2.0);
 
     bspline_trajectory nb;
 
@@ -57,6 +57,7 @@ int main()
     if (time_point_size < 0)
         return -1;
 
+    /** @brief Creation of the knot vector **/
     vector<double> t; // time vector 
     vector<double> cp_1d; // control points 1d
 
@@ -73,8 +74,9 @@ int main()
     }
     std::cout << std::endl;
 
-    double s_cp = dis_3d(generator);
-    double e_cp = dis_3d(generator);
+    /** @brief Creation of the control point vector **/
+    double s_cp = dis_1d(generator);
+    double e_cp = dis_1d(generator);
     std::cout << "control point vector =";
     for (int i = 0; i < order; i++)
     {
@@ -83,7 +85,7 @@ int main()
     }
     for (int i = 0; i < cp_size - 2*order; i++)
     {
-        double rand_value = dis_3d(generator);
+        double rand_value = dis_1d(generator);
         std::cout << " " << rand_value;
         cp_1d.push_back(rand_value);
     }
@@ -156,13 +158,16 @@ int main()
     // Set the size of output image to 1200x780 pixels
     plt::figure_size(980, 460);
     // plot a red dashed line from given x and y data.
-    plt::plot(one_d_pos_time.first, one_d_pos_time.second, "b--");
-    plt::plot(one_d_pos_time.first, one_d_vel, "r--");
-    plt::plot(one_d_pos_time.first, one_d_acc, "y--");
+    plt::named_plot("pos", one_d_pos_time.first, one_d_pos_time.second, "b--");
+    plt::named_plot("vel", one_d_pos_time.first, one_d_vel, "r--");
+    plt::named_plot("acc", one_d_pos_time.first, one_d_acc, "y--");
+
+    // Enable legend.
+    plt::legend();
     
-    string title = std::to_string(order) + " order non-uniform-bspline";
+    string title = std::to_string(order) + " order 1d non-uniform-bspline";
     plt::title(title); // add graph title
-    plt::show();
+    // plt::show()
 
     return 0;
 }
