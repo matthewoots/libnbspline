@@ -42,8 +42,10 @@ int main()
 {
     std::random_device dev;
     std::mt19937 generator(dev());
+
+    double maximum_variation = 2.0;
     std::uniform_real_distribution<double> dis(1.0, 3.0);
-    std::uniform_real_distribution<double> dis_1d(-2.0, 2.0);
+    std::uniform_real_distribution<double> dis_1d(-maximum_variation, maximum_variation);
 
     bspline_trajectory nb;
 
@@ -162,12 +164,32 @@ int main()
     plt::named_plot("vel", one_d_pos_time.first, one_d_vel, "r--");
     plt::named_plot("acc", one_d_pos_time.first, one_d_acc, "y--");
 
+    // Just for visualization
+    vector<double> t_trim;
+    for(int i = 0; i <= (cp_size-1)-(order-1); i++)
+        t_trim.push_back(t[i]);
+
+    int plot_segments = 10;
+    double steps = (2 * maximum_variation) / (double)(plot_segments-1);
+    for(int i = 0; i < (int)t_trim.size(); i++)
+    {
+        double accumulated = - maximum_variation;
+        vector<double> t_plot(plot_segments, t_trim[i]);
+        vector<double> l_plot;
+        for (int j = 0; j < plot_segments; j++)
+        {
+            l_plot.push_back(accumulated);
+            accumulated += steps;
+        }
+        plt::plot(t_plot, l_plot, "m--");
+    }
+
     // Enable legend.
     plt::legend();
     
     string title = std::to_string(order) + " order 1d non-uniform-bspline";
     plt::title(title); // add graph title
-    // plt::show()
+    // plt::show();
 
     return 0;
 }

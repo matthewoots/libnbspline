@@ -229,8 +229,45 @@ namespace nbspline
 
         }
 
+        /** @brief Create the pva state of a 1d non-uniform bspline
+         *  this is with prior calculation of M matrix and u_t and offset
+        **/
+        inline nbs_pva_state_1d get_nbspline_1d_w_prior(
+            int time_index_offset, vector<double> cp, double u_t, Eigen::MatrixXd M, int k)
+        {
+            nbs_pva_state_1d s;
+
+            // Control Points in a Span Column vector
+            Eigen::VectorXd p = Eigen::VectorXd::Zero(k);
+            // Position Row Vector, Velocity Row Vector, Acceleration Row Vector, Snap Row Vector
+            Eigen::RowVectorXd u, du, ddu;
+            u = du = ddu = Eigen::RowVectorXd::Zero(k); 
+
+            // Make the u, du, ddu and p matrix
+            // std::cout << "P vector";
+            for (int l = 0; l < k; l++)
+            {
+                u(l) = pow(u_t, l);
+                p(l) = cp[time_index_offset + l];
+                // std::cout << " " << p(l);
+                if (l >= 1)
+                    du(l) = (l) * pow(u_t, l-1);
+                if (l >= 2)
+                    ddu(l) = (l) * (l-1) * pow(u_t, l-2);
+            }
+            // std::cout << std::endl;
+
+            s.pos = position_at_time_segment(M, u, p);
+            s.vel = velocity_at_time_segment(M, du, p);
+            s.acc = acceleration_at_time_segment(M, ddu, p);
+
+            return s;
+
+        }
+
         /** @brief Create the pva state of a 3d non-uniform bspline
          *  This is 1 pass function, does not calculate more that 1 instance in the bspline 
+         *  Using get_nbspline_1d_w_prior() to save repetition in computation of prior M matrix, u_t and offset 
         **/
         inline nbs_pva_state_3d get_nbspline_3d(
             int order, vector<double> time, 
@@ -239,7 +276,34 @@ namespace nbspline
             nbs_pva_state_3d ss;
             ss.rts = query_time;
 
+            // According to the paper only able to calculate to order 3
+            if (order > 3)
+                return ss;
+            
+            std::pair<double,double> t_i;
+            int time_index_offset = 0;
+            if (!check_query_time(time, query_time, t_i, time_index_offset))
+                return ss;
+            // std::cout << "time_index_offset {" << time_index_offset
+            //     << "} t_i {" << t_i.first << " " << t_i.second << "}" << std::endl;
+
+            int k = order + 1;
+            vector<double> time_trim;
+            // std::cout << "time_trim vector";
+            for (int i = 0; i < k+(order-1); i++)
+            {
+                time_trim.push_back(time[time_index_offset+i]);
+                // std::cout << " " << time[time_index_offset+i];
+            }
+            // std::cout << std::endl;
+
+            Eigen::MatrixXd M = create_general_m(order, time_trim);
+
+            // Only considering [0,1) hence not including 1
+            double u_t = (query_time - t_i.first) / (t_i.second - t_i.first);
+
             row_vector_3d rv;
+            // time_point<std::chrono::system_clock> t_s = system_clock::now();
             // Reorganize the control points into vectors that can be passed into 1d_bspline function
             for (int i = 0; i < (int)cp.size(); i++)
             {
@@ -247,13 +311,16 @@ namespace nbspline
                 rv.ycp.push_back(cp[i].y());
                 rv.zcp.push_back(cp[i].z());
             }
+            // auto t_c = duration<double>(system_clock::now() - t_s).count() * 1000;
+            // std::cout << "conversion time " << KGRN << t_c << "ms" << KNRM << std::endl;
 
-            nbs_pva_state_1d x = get_nbspline_1d(
-                order, time, rv.xcp, query_time);
-            nbs_pva_state_1d y = get_nbspline_1d(
-                order, time, rv.ycp, query_time);
-            nbs_pva_state_1d z = get_nbspline_1d(
-                order, time, rv.zcp, query_time);
+
+            nbs_pva_state_1d x = get_nbspline_1d_w_prior(
+                time_index_offset, rv.xcp, u_t, M, k);
+            nbs_pva_state_1d y = get_nbspline_1d_w_prior(
+                time_index_offset, rv.ycp, u_t, M, k);
+            nbs_pva_state_1d z = get_nbspline_1d_w_prior(
+                time_index_offset, rv.zcp, u_t, M, k);
 
             ss.pos = Eigen::Vector3d(x.pos, y.pos, z.pos);
             ss.vel = Eigen::Vector3d(x.vel, y.vel, z.vel);

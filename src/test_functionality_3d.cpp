@@ -42,8 +42,10 @@ int main()
 {
     std::random_device dev;
     std::mt19937 generator(dev());
+
+    double maximum_variation = 2.0;
     std::uniform_real_distribution<double> dis(1.0, 3.0);
-    std::uniform_real_distribution<double> dis_3d(-2.0, 2.0);
+    std::uniform_real_distribution<double> dis_3d(-maximum_variation, maximum_variation);
     std::uniform_real_distribution<double> dis_3d_h(1.0, 2.0);
 
     bspline_trajectory nb;
@@ -51,7 +53,7 @@ int main()
     int order = 3;
 
     /** @brief Key components cp_size and time_point_size relationship **/
-    int cp_size = 10;
+    int cp_size = 20;
     int time_point_size = cp_size + order - 1;
 
     if (time_point_size < 0)
@@ -139,6 +141,26 @@ int main()
     plt::named_plot("x/m", three_d_pos_time.first, rv.xcp, "b--");
     plt::named_plot("y/m", three_d_pos_time.first, rv.ycp, "r--");
     plt::named_plot("z/m", three_d_pos_time.first, rv.zcp, "y--");
+
+    // Just for visualization
+    vector<double> t_trim;
+    for(int i = 0; i <= (cp_size-1)-(order-1); i++)
+        t_trim.push_back(t[i]);
+
+    int plot_segments = 10;
+    double steps = (2 * maximum_variation) / (double)(plot_segments-1);
+    for(int i = 0; i < (int)t_trim.size(); i++)
+    {
+        double accumulated = - maximum_variation;
+        vector<double> t_plot(plot_segments, t_trim[i]);
+        vector<double> l_plot;
+        for (int j = 0; j < plot_segments; j++)
+        {
+            l_plot.push_back(accumulated);
+            accumulated += steps;
+        }
+        plt::plot(t_plot, l_plot, "m--");
+    }
 
     // Enable legend.
     plt::legend();
