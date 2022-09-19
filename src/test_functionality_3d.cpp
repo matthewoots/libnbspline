@@ -50,11 +50,14 @@ int main()
 
     bspline_trajectory nb;
 
+    int run_interval_ms = 100;
+
     int order = 3;
 
     /** @brief Key components cp_size and time_point_size relationship **/
-    int cp_size = 20;
-    int time_point_size = cp_size + order - 1;
+    int cp_size = 10;
+    // int time_point_size = cp_size + order - 1;
+    int time_point_size = cp_size;
 
     if (time_point_size < 0)
         return -1;
@@ -123,7 +126,7 @@ int main()
         std::cout << "[" << KYEL << q_t << KNRM << 
             "] get_nbspline_3d " << KGRN << t_gn3 << "ms" << KNRM << std::endl;
 
-        sleep_for(milliseconds(100));
+        sleep_for(milliseconds(run_interval_ms));
     }
 
     bspline_trajectory::row_vector_3d rv;

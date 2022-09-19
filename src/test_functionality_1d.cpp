@@ -49,12 +49,15 @@ int main()
 
     bspline_trajectory nb;
 
+    int run_interval_ms = 100;
+
     int order = 3;
     int k = order+1;
 
     /** @brief Key components cp_size and time_point_size relationship **/
     int cp_size = 10;
-    int time_point_size = cp_size + order - 1;
+    // int time_point_size = cp_size + order - 1;
+    int time_point_size = cp_size;
 
     if (time_point_size < 0)
         return -1;
@@ -106,7 +109,7 @@ int main()
 
     /** @brief testing of check_query_time, find the appropriate time point pair for evaluation**/
     time_point<std::chrono::system_clock> t_s_cqt = system_clock::now();
-    if (!nb.check_query_time(t, q_t, t_i, time_index_offset))
+    if (!nb.check_query_time(order, t, q_t, t_i, time_index_offset))
     {
         std::cout << "check_query_time fail, query time not inside time vector" << std::endl;
         return -1;
@@ -115,7 +118,7 @@ int main()
     std::cout << "check_query_time " << KGRN << t_cqt << "ms" << KNRM << std::endl;
 
 
-    if (!nb.check_query_time(t, 0.001, t_i, time_index_offset))
+    if (!nb.check_query_time(order, t, 0.001, t_i, time_index_offset))
     {
         std::cout << "check_query_time fail, query time not inside time vector" << std::endl;
         return -1;
@@ -154,8 +157,22 @@ int main()
         std::cout << "[" << KYEL << q_t << KNRM << 
             "] get_nbspline_1d " << KGRN << t_gn1 << "ms" << KNRM << std::endl;
 
-        sleep_for(milliseconds(100));
+        sleep_for(milliseconds(run_interval_ms));
     }
+
+    vector<double> velocity_vect, acceleration_vect;
+    velocity_vect.push_back(0.0);
+    for (int i = 1; i < (int)one_d_pos_time.second.size(); i++)
+    {
+        velocity_vect.push_back(
+            (one_d_pos_time.second[i]-one_d_pos_time.second[i-1])/((double)run_interval_ms/1000.0));
+        if (i >= 2)
+            acceleration_vect.push_back(
+                (velocity_vect[i-1]-velocity_vect[i-2])/((double)run_interval_ms/1000.0));
+    }
+    // velocity_vect.push_back(velocity_vect[velocity_vect.size()-1]);
+    acceleration_vect.push_back(acceleration_vect[acceleration_vect.size()-1]);
+    acceleration_vect.push_back(acceleration_vect[acceleration_vect.size()-1]);
 
     // Set the size of output image to 1200x780 pixels
     plt::figure_size(980, 460);
@@ -163,6 +180,8 @@ int main()
     plt::named_plot("pos", one_d_pos_time.first, one_d_pos_time.second, "b--");
     plt::named_plot("vel", one_d_pos_time.first, one_d_vel, "r--");
     plt::named_plot("acc", one_d_pos_time.first, one_d_acc, "y--");
+    plt::named_plot("check_velocity", one_d_pos_time.first, velocity_vect, "c--");
+    plt::named_plot("check_acceleration", one_d_pos_time.first, acceleration_vect, "g--");
 
     // Just for visualization
     vector<double> t_trim;
@@ -184,12 +203,25 @@ int main()
         plt::plot(t_plot, l_plot, "m--");
     }
 
+    for(int i = 0; i < (int)t_trim.size(); i++)
+    {
+        double accumulated = - maximum_variation;
+        vector<double> t_plot(plot_segments, t_trim[i]);
+        vector<double> l_plot;
+        for (int j = 0; j < plot_segments; j++)
+        {
+            l_plot.push_back(accumulated);
+            accumulated += steps;
+        }
+        plt::plot(t_plot, l_plot, "m--");
+    }
+
     // Enable legend.
     plt::legend();
     
     string title = std::to_string(order) + " order 1d non-uniform-bspline";
     plt::title(title); // add graph title
-    // plt::show();
+    plt::show();
 
     return 0;
 }
