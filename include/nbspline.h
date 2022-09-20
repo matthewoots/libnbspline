@@ -87,6 +87,7 @@ namespace nbspline
 
         /** @brief Creating Non-uniform Bspline basis M matrix
         * https://xiaoxingchen.github.io/2020/03/02/bspline_in_so3/general_matrix_representation_for_bsplines.pdf
+        * @param order the degree of the spline 
         * @param t vector of time points, ti-order to ti the number of time points is k+1
         * etc 5 time points, 4 control points, 3rd order
         **/
@@ -148,6 +149,13 @@ namespace nbspline
             return M;
         }
 
+        /** @brief Find the current pair of knots that we are inbetween of
+         * @param order is used to lower the offset so that we can construct the M matrix according to Kaihuai Qin's formulation
+         * @param time is the knot vector that was acquired initially
+         * @param query is the current point in time that is being queried 
+         * @param t_i (return) the current pair of knots
+         * @param off (return) the current offset
+        **/
         bool check_query_time(int order, vector<double> time, double query, std::pair<double,double>& t_i, int& off)
         {
             for (int i = 0; i < (int)time.size()-1; i++)
@@ -167,11 +175,14 @@ namespace nbspline
         }
 
         /** @brief Create the pva state of a 1d non-uniform bspline
-         *  This is 1 pass function, does not calculate more that 1 instance in the bspline 
+         * This is 1 pass function, does not calculate more that 1 instance in the bspline 
+         * @param order is degree of the spline
+         * @param time is the knot vector that was acquired initially
+         * @param cp is the vector of control points 
+         * @param query_time is the current point in time that is being queried 
         **/
         inline nbs_pva_state_1d get_nbspline_1d(
-            int order, vector<double> time, 
-            vector<double> cp, double query_time)
+            int order, vector<double> time, vector<double> cp, double query_time)
         {
             nbs_pva_state_1d s;
             // According to the paper only able to calculate to order 3
@@ -187,16 +198,16 @@ namespace nbspline
 
             int k = order + 1;
             vector<double> time_trim;
-            std::cout << "time_trim vector";
+            // std::cout << "time_trim vector";
             for (int i = 0; i < k+(order-1); i++)
             {
                 if (time_index_offset+i < 0)
                     time_trim.push_back(0.0);
                 else
                     time_trim.push_back(time[time_index_offset+i]);
-                std::cout << " " << time[time_index_offset+i];
+                // std::cout << " " << time[time_index_offset+i];
             }
-            std::cout << std::endl;
+            // std::cout << std::endl;
 
             Eigen::MatrixXd M = create_general_m(order, time_trim);
 
@@ -210,22 +221,22 @@ namespace nbspline
             u = du = ddu = Eigen::RowVectorXd::Zero(k); 
 
             // Make the u, du, ddu and p matrix
-            std::cout << "P vector";
+            // std::cout << "P vector";
             for (int l = 0; l < k; l++)
             {
                 u(l) = pow(u_t, l);
                 p(l) = cp[time_index_offset+(order-1) + l];
-                std::cout << " " << p(l);
+                // std::cout << " " << p(l);
                 if (l >= 1)
                     du(l) = (l) * pow(u_t, l-1);
                 if (l >= 2)
                     ddu(l) = (l) * (l-1) * pow(u_t, l-2);
             }
-            std::cout << std::endl;
+            // std::cout << std::endl;
 
-            s.pos = position_at_time_segment(M, u, p);
-            s.vel = velocity_at_time_segment((t_i.second - t_i.first), M, du, p);
-            s.acc = acceleration_at_time_segment((t_i.second - t_i.first), M, ddu, p);
+            s.pos = position_at_time_segment(u, M, p);
+            s.vel = velocity_at_time_segment((t_i.second - t_i.first), du, M, p);
+            s.acc = acceleration_at_time_segment((t_i.second - t_i.first), ddu, M, p);
             s.rts = query_time;
 
             return s;
@@ -233,7 +244,11 @@ namespace nbspline
         }
 
         /** @brief Create the pva state of a 1d non-uniform bspline
-         *  this is with prior calculation of M matrix and u_t and offset
+         * This is with prior calculation of M matrix and u_t and offset
+         * @param order is degree of the spline
+         * @param time is the knot vector that was acquired initially
+         * @param cp is the vector of control points 
+         * @param query_time is the current point in time that is being queried 
         **/
         inline nbs_pva_state_1d get_nbspline_1d_w_prior(
             double dt, int time_index_offset, vector<double> cp, double u_t, Eigen::MatrixXd M, int k)
@@ -260,21 +275,24 @@ namespace nbspline
             }
             // std::cout << std::endl;
 
-            s.pos = position_at_time_segment(M, u, p);
-            s.vel = velocity_at_time_segment(dt, M, du, p);
-            s.acc = acceleration_at_time_segment(dt, M, ddu, p);
+            s.pos = position_at_time_segment(u, M, p);
+            s.vel = velocity_at_time_segment(dt, du, M, p);
+            s.acc = acceleration_at_time_segment(dt, ddu, M, p);
 
             return s;
 
         }
 
         /** @brief Create the pva state of a 3d non-uniform bspline
-         *  This is 1 pass function, does not calculate more that 1 instance in the bspline 
-         *  Using get_nbspline_1d_w_prior() to save repetition in computation of prior M matrix, u_t and offset 
+         * This is 1 pass function, does not calculate more that 1 instance in the bspline 
+         * Using get_nbspline_1d_w_prior() to save repetition in computation of prior M matrix, u_t and offset 
+         * @param order is degree of the spline
+         * @param time is the knot vector that was acquired initially
+         * @param cp is the vector of control points in the 3d coordinates
+         * @param query_time is the current point in time that is being queried 
         **/
         inline nbs_pva_state_3d get_nbspline_3d(
-            int order, vector<double> time, 
-            vector<Eigen::Vector3d> cp, double query_time)
+            int order, vector<double> time, vector<Eigen::Vector3d> cp, double query_time)
         {
             nbs_pva_state_3d ss;
             ss.rts = query_time;
@@ -338,44 +356,43 @@ namespace nbspline
 
         /** @brief 
          * Calculate position value 
-         * @param
-         * M : order+1 x order+1 matrix
-         * u : Row vector of position association vector
-         * p : Control points in that segment
+         * @param u is the row vector of position association vector
+         * @param M is the order+1 x order+1 matrix
+         * @param p is the control points in that segment
          * u * M * p  
         **/
         inline double position_at_time_segment(
-            Eigen::MatrixXd M, Eigen::RowVectorXd u, Eigen::VectorXd p)
+            Eigen::RowVectorXd u, Eigen::MatrixXd M, Eigen::VectorXd p)
         {
             return (u * M * p)(0,0);
         }
 
         /** @brief 
          * Calculate velocity value
-         * @param
-         * M : order+1 x order+1 matrix
-         * du : Row vector of velocity association vector
-         * p : Control points in that segment
-         * du * M * p  
+         * @param dt knot interval
+         * @param du is the row vector of velocity association vector
+         * @param M is the order+1 x order+1 matrix
+         * @param p is the control points in that segment
+         * (1/dt) * du * M * p  
         **/
         inline double velocity_at_time_segment(
-            double dt, Eigen::MatrixXd M, Eigen::RowVectorXd du, Eigen::VectorXd p)
+            double dt, Eigen::RowVectorXd du, Eigen::MatrixXd M, Eigen::VectorXd p)
         {
-            return (1/dt) *(du * M * p)(0,0);
+            return (1/dt) * (du * M * p)(0,0);
         }
 
         /** @brief 
          * Calculate acceleration value
-         * @param
-         * M : order+1 x order+1 matrix
-         * ddu : Row vector of acceleration association vector
-         * p : Control points in that segment
-         * ddu * M * p  
+         * @param dt knot interval
+         * @param ddu is the row vector of acceleration association vector
+         * @param M is the order+1 x order+1 matrix
+         * @param p is the control points in that segment
+         * pow((1/dt),2) * ddu * M * p  
         **/
         inline double acceleration_at_time_segment(
-            double dt, Eigen::MatrixXd M, Eigen::RowVectorXd ddu, Eigen::VectorXd p)
+            double dt, Eigen::RowVectorXd ddu, Eigen::MatrixXd M, Eigen::VectorXd p)
         {
-            return pow((1/dt),2) *(ddu * M * p)(0,0);
+            return pow((1/dt),2) * (ddu * M * p)(0,0);
         }
 
     };

@@ -2,6 +2,20 @@
 
 ## Introduction
 libnbspline is a header only library, several test examples are compiled using CMake. Libnbspline aims to provide a library that accepts non-uniform knot vector unlike uniform bsplines with a fixed knot interval.
+- This library uses a mixed concepts from `General Matrix Representations for B-Splines` by `Kaihuai Qin` ([here](https://xiaoxingchen.github.io/2020/03/02/bspline_in_so3/general_matrix_representation_for_bsplines.pdf)) and `Real-Time Trajectory Replanning for MAVs using Uniform B-splines and a 3D Circular Buffer` by `Vladyslav Usenko` ([here](https://arxiv.org/pdf/1703.01416.pdf))
+---
+
+## Some insights
+
+**Correction** of derivative equations in `Kaihuai Qin`'s implementation by `Vladyslav Usenko`
+
+- **Position** is expressed as $c_{k-1} = U^k M^k V^k$
+- `Original` **Velocity** is expressed as $\frac{dc_{k-1}}{du} = \frac{dU^k}{du} M^k V^k$
+- `Corrected` **Velocity** is expressed as $\frac{dc_{k-1}}{du} = \frac{1}{(u_{i+1} - u_i)} * \frac{dU^k}{du} M^k V^k$
+- `Original` **Acceleration** is expressed as $\frac{d^2c_{k-1}}{du^2} = \frac{d^2U^k}{du^2} M^k V^k$
+- `Corrected` **Acceleration** is expressed as $\frac{d^2c_{k-1}}{du^2} = (\frac{1}{(u_{i+1} - u_i)})^2 \frac{d^2U^k}{du^2} M^k V^k$
+
+---
 
 | | |
 | :-: | :-: |
@@ -25,7 +39,7 @@ make
 - Run `./functionality_1d` in the `build` folder to test the performance for **1D** without going through the ctest checks
 - Run `./functionality_3d` in the `build` folder to test the performance for **3D** and plots out the positions in the 3 axis
 ```bash
-# Time vector represents the ascending time vector (size = cp_size + order - 1)
+# Time vector represents the ascending time vector (size = cp_size)
 # Control point vector is defined by a clamped vector (order*start_cp ... order*end_cp)
 # Relationship is seen in test_functionality.cpp
 time_vector = 0 1.60281 2.9517 4.48911 6.16895 7.25034 8.89521 10.15 12.1304 13.3458 14.9469 16.1748
