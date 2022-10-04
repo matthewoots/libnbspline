@@ -41,6 +41,8 @@ using namespace std::chrono;
 
 namespace nbspline
 {
+    typedef time_point<std::chrono::system_clock> t_p_sc; // giving a typename
+
     class bspline_trajectory
     {
         private:
@@ -54,7 +56,7 @@ namespace nbspline
 
         struct nbs_pva_state_1d
         {
-            double rts; // time 
+            t_p_sc rts; // time 
             double pos; // position vector 1d
             double vel; // velocity vector 1d
             double acc; // acceleration vector 1d
@@ -62,7 +64,7 @@ namespace nbspline
 
         struct nbs_pva_state_3d
         {
-            double rts; // time
+            t_p_sc rts; // time
             Eigen::Vector3d pos; // position 3d
             Eigen::Vector3d vel; // velocity 3d
             Eigen::Vector3d acc; // acceleration 3d
@@ -156,12 +158,17 @@ namespace nbspline
          * @param t_i (return) the current pair of knots
          * @param off (return) the current offset
         **/
-        bool check_query_time(int order, vector<double> time, double query, std::pair<double,double>& t_i, int& off)
+        bool check_query_time(
+            int order, vector<t_p_sc> time, t_p_sc query, 
+            std::pair<t_p_sc, t_p_sc>& t_i, int& off)
         {
             for (int i = 0; i < (int)time.size()-1; i++)
             {
+                auto ms0 = std::chrono::duration_cast<std::chrono::milliseconds>(query - time[i]);
+                auto ms1 = std::chrono::duration_cast<std::chrono::milliseconds>(time[i+1] - query);
                 // Only considering [0,1) hence not including 1
-                if (query - time[i] >= 0 && time[i+1] - query > 0)
+                // Change it from milliseconds to seconds
+                if ((double)ms0.count()/1000.0 >= 0 && (double)ms1.count()/1000.0 > 0)
                 {
                     t_i.first = time[i];
                     t_i.second = time[i+1];
@@ -182,37 +189,45 @@ namespace nbspline
          * @param query_time is the current point in time that is being queried 
         **/
         inline nbs_pva_state_1d get_nbspline_1d(
-            int order, vector<double> time, vector<double> cp, double query_time)
+            int order, vector<t_p_sc> time, 
+            vector<double> cp, t_p_sc query_time, t_p_sc start)
         {
             nbs_pva_state_1d s;
             // According to the paper only able to calculate to order 3
             if (order > 3)
                 return s;
+            if (cp.empty() || time.empty())
+                return s;
+            if (time.size() != cp.size() + (order-1))
+            {
+                std::cout << KRED << "time vector size not correct!" << KNRM << std::endl;
+                return s;
+            }
             
-            std::pair<double,double> t_i;
+            std::pair<t_p_sc, t_p_sc> t_i;
             int time_index_offset = 0;
             if (!check_query_time(order, time, query_time, t_i, time_index_offset))
                 return s;
-            // std::cout << "time_index_offset {" << time_index_offset
-            //     << "} t_i {" << t_i.first << " " << t_i.second << "}" << std::endl;
 
             int k = order + 1;
             vector<double> time_trim;
             // std::cout << "time_trim vector";
             for (int i = 0; i < k+(order-1); i++)
             {
-                if (time_index_offset+i < 0)
-                    time_trim.push_back(0.0);
-                else
-                    time_trim.push_back(time[time_index_offset+i]);
-                // std::cout << " " << time[time_index_offset+i];
+                double specific_time = duration<double>(time[time_index_offset+i] - start).count();
+                time_trim.push_back(specific_time);
+                // std::cout << " " << specific_time;
             }
             // std::cout << std::endl;
 
             Eigen::MatrixXd M = create_general_m(order, time_trim);
 
+            // u_t = (query_time - t_i.first) / (t_i.second - t_i.first)
+            double numerator = duration<double>(query_time - t_i.first).count();
+            double denominator = duration<double>(t_i.second - t_i.first).count();
             // Only considering [0,1) hence not including 1
-            double u_t = (query_time - t_i.first) / (t_i.second - t_i.first);
+            double u_t = numerator / denominator;
+            double dt = denominator;
 
             // Control Points in a Span Column vector
             Eigen::VectorXd p = Eigen::VectorXd::Zero(k);
@@ -225,7 +240,7 @@ namespace nbspline
             for (int l = 0; l < k; l++)
             {
                 u(l) = pow(u_t, l);
-                p(l) = cp[time_index_offset+(order-1) + l];
+                p(l) = cp[time_index_offset + l];
                 // std::cout << " " << p(l);
                 if (l >= 1)
                     du(l) = (l) * pow(u_t, l-1);
@@ -235,8 +250,8 @@ namespace nbspline
             // std::cout << std::endl;
 
             s.pos = position_at_time_segment(u, M, p);
-            s.vel = velocity_at_time_segment((t_i.second - t_i.first), du, M, p);
-            s.acc = acceleration_at_time_segment((t_i.second - t_i.first), ddu, M, p);
+            s.vel = velocity_at_time_segment(dt, du, M, p);
+            s.acc = acceleration_at_time_segment(dt, ddu, M, p);
             s.rts = query_time;
 
             return s;
@@ -251,7 +266,8 @@ namespace nbspline
          * @param query_time is the current point in time that is being queried 
         **/
         inline nbs_pva_state_1d get_nbspline_1d_w_prior(
-            double dt, int time_index_offset, vector<double> cp, double u_t, Eigen::MatrixXd M, int k)
+            double dt, int time_index_offset, vector<double> cp, 
+            double u_t, Eigen::MatrixXd M, int k)
         {
             nbs_pva_state_1d s;
 
@@ -266,7 +282,7 @@ namespace nbspline
             for (int l = 0; l < k; l++)
             {
                 u(l) = pow(u_t, l);
-                p(l) = cp[time_index_offset+((k-1)-1) + l];
+                p(l) = cp[time_index_offset + l];
                 // std::cout << " " << p(l);
                 if (l >= 1)
                     du(l) = (l) * pow(u_t, l-1);
@@ -292,7 +308,8 @@ namespace nbspline
          * @param query_time is the current point in time that is being queried 
         **/
         inline nbs_pva_state_3d get_nbspline_3d(
-            int order, vector<double> time, vector<Eigen::Vector3d> cp, double query_time)
+            int order, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, 
+            t_p_sc query_time, t_p_sc start)
         {
             nbs_pva_state_3d ss;
             ss.rts = query_time;
@@ -300,32 +317,38 @@ namespace nbspline
             // According to the paper only able to calculate to order 3
             if (order > 3)
                 return ss;
+            if (cp.empty() || time.empty())
+                return ss;
+            if (time.size() != cp.size() + (order-1))
+            {
+                std::cout << KRED << "time vector size not correct!" << KNRM << std::endl;
+                return ss;
+            }
             
-            std::pair<double,double> t_i;
+            std::pair<t_p_sc, t_p_sc> t_i;
             int time_index_offset = 0;
             if (!check_query_time(order, time, query_time, t_i, time_index_offset))
                 return ss;
-            // std::cout << "time_index_offset {" << time_index_offset
-            //     << "} t_i {" << t_i.first << " " << t_i.second << "}" << std::endl;
 
             int k = order + 1;
             vector<double> time_trim;
             // std::cout << "time_trim vector";
             for (int i = 0; i < k+(order-1); i++)
             {
-                if (time_index_offset+i < 0)
-                    time_trim.push_back(0.0);
-                else
-                    time_trim.push_back(time[time_index_offset+i]);
-                // std::cout << " " << time[time_index_offset+i];
+                double specific_time = duration<double>(time[time_index_offset+i] - start).count();
+                time_trim.push_back(specific_time);
+                // std::cout << " " << specific_time;
             }
             // std::cout << std::endl;
 
             Eigen::MatrixXd M = create_general_m(order, time_trim);
 
+            // u_t = (query_time - t_i.first) / (t_i.second - t_i.first)
+            double numerator = duration<double>(query_time - t_i.first).count();
+            double denominator = duration<double>(t_i.second - t_i.first).count();
             // Only considering [0,1) hence not including 1
-            double u_t = (query_time - t_i.first) / (t_i.second - t_i.first);
-            double dt = (t_i.second - t_i.first);
+            double u_t = numerator / denominator;
+            double dt = denominator;
 
             row_vector_3d rv;
             // time_point<std::chrono::system_clock> t_s = system_clock::now();

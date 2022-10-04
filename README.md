@@ -9,17 +9,28 @@ libnbspline is a header only library, several test examples are compiled using C
 
 **Correction** of derivative equations in `Kaihuai Qin`'s implementation by `Vladyslav Usenko`
 
-- **Position** is expressed as $c_{k-1} = U^k M^k V^k$
-- `Original` **Velocity** is expressed as $\frac{dc_{k-1}}{du} = \frac{dU^k}{du} M^k V^k$
-- `Corrected` **Velocity** is expressed as $\frac{dc_{k-1}}{du} = \frac{1}{(u_{i+1} - u_i)} * \frac{dU^k}{du} M^k V^k$
-- `Original` **Acceleration** is expressed as $\frac{d^2c_{k-1}}{du^2} = \frac{d^2U^k}{du^2} M^k V^k$
-- `Corrected` **Acceleration** is expressed as $\frac{d^2c_{k-1}}{du^2} = (\frac{1}{(u_{i+1} - u_i)})^2 \frac{d^2U^k}{du^2} M^k V^k$
+- **Position** is expressed as $$c_{k-1} = U^k M^k V^k$$
+- `Original` **Velocity** is expressed as $$\frac{d}{du}c_{k-1} = \frac{dU^k}{du} M^k V^k$$
+- `Corrected` **Velocity** is expressed as $$\frac{d}{du}c_{k-1} = \frac{1}{(u_{i+1} - u_i)} * \frac{dU^k}{du} M^k V^k$$
+- `Original` **Acceleration** is expressed as $$\frac{d^2}{du^2}c_{k-1} = \frac{d^2U^k}{du^2} M^k V^k$$
+- `Corrected` **Acceleration** is expressed as $$\frac{d^2}{du^2}c_{k-1} = (\frac{1}{(u_{i+1} - u_i)})^2 \frac{d^2U^k}{du^2} M^k V^k$$
+
+**Input:** 
+1. `control_points` in `double` or `Eigen::Vector3d` (size = user input)
+2. `knots` in `vector<td::chrono::time_point<std::chrono::system_clock>>`(size = control point size + order - 1)
+    - control points + knots must be clamped together (with order-1 duplicate of start and end points)
+
+**Output:**
+1. `time_point` in `std::chrono::time_point<std::chrono::system_clock>`
+2. `position` in `Eigen::Vector3d`
+3. `velocity` in `Eigen::Vector3d`
+4. `acceleration` in `Eigen::Vector3d`
 
 ---
 
-| | |
+| pos, vel and acc | 3d plot for position |
 | :-: | :-: |
-|[<img src="3rd_order_1d_nbspline.png" width="600"/>](3rd_order_1d_nbspline.png)|[<img src="3rd_order_3d_nbspline.png" width="600"/>](3rd_order_3d_nbspline.png)|
+|[<img src="media/3rd_order_1d_nbspline.png" width="600"/>](media/3rd_order_1d_nbspline.png)|[<img src="media/3rd_order_3d_nbspline.png" width="600"/>](media/3rd_order_3d_nbspline.png)|
 
 ---
 
