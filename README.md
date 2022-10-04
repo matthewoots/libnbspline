@@ -26,6 +26,16 @@ libnbspline is a header only library, several test examples are compiled using C
 3. `velocity` in `Eigen::Vector3d`
 4. `acceleration` in `Eigen::Vector3d`
 
+**Useful functions:**
+
+Functions with `get_nbspline_*_all` enables the user to input an interval to generate all points until `knots.back()` while `get_nbspline_*` enables the user to call the position in realtime.
+
+1. get_nbspline_1d_all `vector<nbs_pva_state_1d> get_nbspline_1d_all(int order, vector<t_p_sc> time, vector<double> cp, double interval, t_p_sc start)`
+2. get_nbspline_1d `nbs_pva_state_1d get_nbspline_1d(int order, vector<t_p_sc> time, vector<double> cp, t_p_sc query_time, t_p_sc start)`
+3. get_nbspline_1d_w_prior `nbs_pva_state_1d get_nbspline_1d_w_prior(double dt, int time_index_offset, vector<double> cp, double u_t, Eigen::MatrixXd M, int k)`
+4. get_nbspline_3d `nbs_pva_state_3d get_nbspline_3d(int order, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, t_p_sc query_time, t_p_sc start)`
+5. get_nbspline_3d_all `vector<nbs_pva_state_3d> get_nbspline_3d_all(int order, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, double interval, t_p_sc start)`
+
 ---
 
 | pos, vel and acc | 3d plot for position |
@@ -47,8 +57,9 @@ make
 
 ## Run functionality check and brief of the algorithm and code
 `ctest make` will run `functionality_1d` to show whether functionality for 1 dimension bspline is valid
-- Run `./functionality_1d` in the `build` folder to test the performance for **1D** without going through the ctest checks
-- Run `./functionality_3d` in the `build` folder to test the performance for **3D** and plots out the positions in the 3 axis
+- `<argv>` can be empty, `fast` or `faster`, fast skips the time pauses to complete the graph, while faster optimizes the calculation
+- Run `./functionality_1d <argv>` in the `build` folder to test the performance for **1D** without going through the ctest checks
+- Run `./functionality_3d <argv>` in the `build` folder to test the performance for **3D** and plots out the positions in the 3 axis
 ```bash
 # Time vector represents the ascending time vector (size = cp_size)
 # Control point vector is defined by a clamped vector (order*start_cp ... order*end_cp)

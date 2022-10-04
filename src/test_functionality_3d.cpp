@@ -40,10 +40,28 @@ typedef time_point<std::chrono::system_clock> t_p_sc; // giving a typename
 
 namespace plt = matplotlibcpp;
 
-int main()
+int main(int argc, char** argv)
 {
     std::random_device dev;
     std::mt19937 generator(dev());
+
+    int fast_forward = 0;
+    if (argc == 0)
+        std::cout << KRED << "[no input] default no fast forward" << KNRM << std::endl;
+    else if (strcmp(argv[1], "fast") == 0)
+    {
+        fast_forward = 1;
+        std::cout << KGRN << "fast-forward activated" << KNRM << std::endl;
+    }
+    else if (strcmp(argv[1], "faster") == 0)
+    {
+        fast_forward = 2;
+        std::cout << KGRN << "even fast-forward activated" << KNRM << std::endl;
+    }
+    else
+    {
+        std::cout << KRED << "[no proper value] default no fast forward" << KNRM << std::endl;
+    }
 
     double maximum_variation = 2.0;
     std::uniform_real_distribution<double> dis(1.0, 3.0);
@@ -139,23 +157,49 @@ int main()
     auto us_interval = std::chrono::duration_cast<std::chrono::milliseconds>(t_start - system_clock::now());
     sleep_for(us_interval + milliseconds(1));
 
-    /** @brief testing of check_query_time, find the appropriate time point pair for evaluation**/
     std::cout << "total nbspline time: " << KYEL << t_s << "s" << KNRM << std::endl;
     std::pair<vector<double>,vector<Eigen::Vector3d>> three_d_pos_time; // 1d position vector with time
-    while (duration<double>(system_clock::now() - t_start).count() < t_s)
+    
+    t_p_sc now = system_clock::now();
+    t_p_sc t_s_gnt = now;
+    if (fast_forward != 2)
     {
-        t_p_sc t_s_gn3 = system_clock::now();
+        while (duration<double>(now - t_start).count() < t_s)
+        {
+            t_p_sc t_s_gn3 = system_clock::now();
 
-        bspline_trajectory::nbs_pva_state_3d state_3d;
-        state_3d = nb.get_nbspline_3d(order, t, cp_3d, t_s_gn3, t_start);
-        three_d_pos_time.second.push_back(state_3d.pos);
-        three_d_pos_time.first.push_back(duration<double>(t_s_gn3 - t_start).count());
-        auto t_gn3 = duration<double>(system_clock::now() - t_s_gn3).count();
-        std::cout << "[" << KYEL << duration<double>(t_s_gn3 - t_start).count() << KNRM << 
-            "] get_nbspline_3d " << KGRN << t_gn3 * 1000 << "ms" << KNRM << std::endl;
+            bspline_trajectory::nbs_pva_state_3d state_3d;
+            state_3d = nb.get_nbspline_3d(order, t, cp_3d, now, t_start);
+            three_d_pos_time.second.push_back(state_3d.pos);
 
-        sleep_for(milliseconds(run_interval_ms));
+            three_d_pos_time.first.push_back(duration<double>(now - t_start).count());
+            
+            auto t_gn3 = duration<double>(system_clock::now() - t_s_gn3).count();
+            std::cout << "[" << KYEL << duration<double>(now - t_start).count() << KNRM << 
+                "] get_nbspline_3d " << KGRN << t_gn3 * 1000 << "ms" << KNRM << std::endl;
+
+            if (fast_forward != 1)
+            {
+                sleep_for(milliseconds(run_interval_ms));
+                now = system_clock::now();
+            }
+            else
+                now += milliseconds(run_interval_ms);
+        }
     }
+    else
+    {
+        vector<bspline_trajectory::nbs_pva_state_3d> state_3d_vector;
+        state_3d_vector = nb.get_nbspline_3d_all(order, t, cp_3d, run_interval_ms/1000.0, t_start);
+        for (auto state_3d : state_3d_vector)
+        {
+            three_d_pos_time.second.push_back(state_3d.pos);
+            three_d_pos_time.first.push_back(duration<double>(state_3d.rts - t_start).count());
+        }
+    }
+
+    std::cout << "time taken for 3d bspline size (" << three_d_pos_time.first.size() << ") calculation is " << 
+        duration<double>(system_clock::now() - t_s_gnt).count() * 1000 << "ms" << std::endl;
 
     bspline_trajectory::row_vector_3d rv;
     // Reorganize the control points into vectors that can be passed into 1d_bspline function
@@ -169,9 +213,9 @@ int main()
     // Set the size of output image to 1200x780 pixels
     plt::figure_size(980, 460);
     // plot a red dashed line from given x and y data.
-    plt::named_plot("x/m", three_d_pos_time.first, rv.xcp, "b--");
-    plt::named_plot("y/m", three_d_pos_time.first, rv.ycp, "r--");
-    plt::named_plot("z/m", three_d_pos_time.first, rv.zcp, "y--");
+    plt::named_plot("x/m", three_d_pos_time.first, rv.xcp, "b*");
+    plt::named_plot("y/m", three_d_pos_time.first, rv.ycp, "r*");
+    plt::named_plot("z/m", three_d_pos_time.first, rv.zcp, "y*");
 
     // Just for visualization
     vector<double> t_trim;
@@ -179,7 +223,7 @@ int main()
         t_trim.push_back(duration<double>(t[i] - t_start).count());
 
     int plot_segments = 10;
-    double start_range = 2 * maximum_variation;
+    double start_range = 1.5 * maximum_variation;
     double steps = (2 * start_range) / (double)(plot_segments-1);
     for(int i = 0; i < (int)t_trim.size(); i++)
     {

@@ -40,10 +40,28 @@ typedef time_point<std::chrono::system_clock> t_p_sc; // giving a typename
 
 namespace plt = matplotlibcpp;
 
-int main()
+int main(int argc, char** argv)
 {
     std::random_device dev;
     std::mt19937 generator(dev());
+
+    int fast_forward = 0;
+    if (argc == 0)
+        std::cout << KRED << "[no input] default no fast forward" << KNRM << std::endl;
+    else if (strcmp(argv[1], "fast") == 0)
+    {
+        fast_forward = 1;
+        std::cout << KGRN << "fast-forward activated" << KNRM << std::endl;
+    }
+    else if (strcmp(argv[1], "faster") == 0)
+    {
+        fast_forward = 2;
+        std::cout << KGRN << "even fast-forward activated" << KNRM << std::endl;
+    }
+    else
+    {
+        std::cout << KRED << "[no proper value] default no fast forward" << KNRM << std::endl;
+    }
 
     double maximum_variation = 2.0;
     std::uniform_real_distribution<double> dis(1.0, 3.0);
@@ -167,27 +185,55 @@ int main()
     auto us_interval = std::chrono::duration_cast<std::chrono::milliseconds>(t_start - system_clock::now());
     sleep_for(us_interval + milliseconds(1));
 
-    // t_s = duration<double>(t[(t.size()-1) - (order-1)] - t_start).count();
     std::cout << "total nbspline time: " << KYEL << t_s << "s" << KNRM << std::endl;
     std::pair<vector<double>,vector<double>> one_d_pos_time; // 1d position vector with time
     vector<double> one_d_vel, one_d_acc;
-    while (duration<double>(system_clock::now() - t_start).count() < t_s)
+
+    t_p_sc now = system_clock::now();
+    t_p_sc t_s_gnt = now;
+    if (fast_forward != 2)
     {
-        t_p_sc t_s_gn1 = system_clock::now();
-        
-        bspline_trajectory::nbs_pva_state_1d state_1d;
-        state_1d = nb.get_nbspline_1d(order, t, cp_1d, t_s_gn1, t_start);
-        one_d_pos_time.second.push_back(state_1d.pos);
+        while (duration<double>(now - t_start).count() < t_s)
+        {
+            t_p_sc t_s_gn1 = system_clock::now();
+            
+            bspline_trajectory::nbs_pva_state_1d state_1d;
+            state_1d = nb.get_nbspline_1d(order, t, cp_1d, now, t_start);
+            one_d_pos_time.second.push_back(state_1d.pos);
 
-        one_d_pos_time.first.push_back(duration<double>(t_s_gn1 - t_start).count());
-        one_d_vel.push_back(state_1d.vel);
-        one_d_acc.push_back(state_1d.acc);
-        auto t_gn1 = duration<double>(system_clock::now() - t_s_gn1).count();
-        std::cout << "[" << KYEL << duration<double>(t_s_gn1 - t_start).count() << KNRM << 
-            "] get_nbspline_1d " << KGRN << t_gn1 * 1000 << "ms" << KNRM << std::endl;
+            one_d_pos_time.first.push_back(duration<double>(now - t_start).count());
+            one_d_vel.push_back(state_1d.vel);
+            one_d_acc.push_back(state_1d.acc);
 
-        sleep_for(milliseconds(run_interval_ms));
+            auto t_gn1 = duration<double>(system_clock::now() - t_s_gn1).count();
+            std::cout << "[" << KYEL << duration<double>(now - t_start).count() << KNRM << 
+                "] get_nbspline_1d " << KGRN << t_gn1 * 1000 << "ms" << KNRM << std::endl;
+
+            if (fast_forward != 1)
+            {
+                sleep_for(milliseconds(run_interval_ms));
+                now = system_clock::now();
+            }
+            else
+                now += milliseconds(run_interval_ms);
+
+        }
     }
+    else
+    {
+        vector<bspline_trajectory::nbs_pva_state_1d> state_1d_vector;
+        state_1d_vector = nb.get_nbspline_1d_all(order, t, cp_1d, run_interval_ms/1000.0, t_start);
+        for (auto state_1d : state_1d_vector)
+        {
+            one_d_pos_time.second.push_back(state_1d.pos);
+            one_d_pos_time.first.push_back(duration<double>(state_1d.rts - t_start).count());
+            one_d_vel.push_back(state_1d.vel);
+            one_d_acc.push_back(state_1d.acc);
+        }
+    }
+
+    std::cout << "time taken for 1d bspline size (" << one_d_pos_time.first.size() << ") calculation is " << 
+        duration<double>(system_clock::now() - t_s_gnt).count() * 1000 << "ms" << std::endl;
 
     // vector<double> velocity_vect, acceleration_vect;
     // velocity_vect.push_back(0.0);
@@ -205,9 +251,9 @@ int main()
     // Set the size of output image to 1200x780 pixels
     plt::figure_size(980, 460);
     // plot a red dashed line from given x and y data.
-    plt::named_plot("pos", one_d_pos_time.first, one_d_pos_time.second, "b--");
-    plt::named_plot("vel", one_d_pos_time.first, one_d_vel, "r--");
-    plt::named_plot("acc", one_d_pos_time.first, one_d_acc, "y--");
+    plt::named_plot("pos", one_d_pos_time.first, one_d_pos_time.second, "b*");
+    plt::named_plot("vel", one_d_pos_time.first, one_d_vel, "r*");
+    plt::named_plot("acc", one_d_pos_time.first, one_d_acc, "y*");
     // plt::named_plot("check_velocity", one_d_pos_time.first, velocity_vect, "c--");
     // plt::named_plot("check_acceleration", one_d_pos_time.first, acceleration_vect, "g--");
 
@@ -217,7 +263,7 @@ int main()
         t_trim.push_back(duration<double>(t[i] - t_start).count());
 
     int plot_segments = 10;
-    double start_range = 2 * maximum_variation;
+    double start_range = 1.5 * maximum_variation;
     double steps = (2 * start_range) / (double)(plot_segments-1);
     for(int i = 0; i < (int)t_trim.size(); i++)
     {
