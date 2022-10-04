@@ -22,9 +22,16 @@ include_directories(
 
 include(CTest)
 
+# Add nbspline library
+add_library(nbspline src/nbspline.cpp)
+
 add_executable(functionality_1d src/test_functionality_1d.cpp)
 add_test(functionality_1d functionality_1d)
-target_link_libraries(functionality_1d ${PYTHON_LIBRARIES})
+target_link_libraries(functionality_1d 
+    ${PYTHON_LIBRARIES}
+    nbspline)
 
 add_executable(functionality_3d src/test_functionality_3d.cpp)
-target_link_libraries(functionality_3d ${PYTHON_LIBRARIES})
+target_link_libraries(functionality_3d 
+    ${PYTHON_LIBRARIES}
+    nbspline)

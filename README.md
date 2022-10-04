@@ -93,8 +93,12 @@ plt::show();
 ---
 
 ## Include in other projects
-To link this header only library, just `include the header file`, hence just add following in the desired `CMakeLists.txt`
+Just add following in the desired `CMakeLists.txt` add the `add_subdirectory` line and inside your `target_link_libraries` line
 ```
-include_directories( ...
-    libnbspline/include)
+add_subdirectory(nbspline)
+...
+target_link_libraries(${NAME}
+  ...
+  nbspline
+)
 ```

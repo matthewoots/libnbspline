@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     std::mt19937 generator(dev());
 
     int fast_forward = 0;
-    if (argc == 0)
+    if (argc == 1)
         std::cout << KRED << "[no input] default no fast forward" << KNRM << std::endl;
     else if (strcmp(argv[1], "fast") == 0)
     {
