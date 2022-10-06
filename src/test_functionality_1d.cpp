@@ -71,12 +71,12 @@ int main(int argc, char** argv)
 
     int run_interval_ms = 100;
 
-    int order = 3;
-    int k = order+1;
+    int degree = 3;
+    int k = degree+1;
 
     /** @brief Key components cp_size and time_point_size relationship **/
     int cp_size = 10;
-    int time_point_size = cp_size + (order-1);
+    int time_point_size = cp_size + (degree-1);
 
     if (time_point_size < 0)
         return -1;
@@ -94,14 +94,14 @@ int main(int argc, char** argv)
     
     for (int i = 0; i < time_point_size; i++)
     {
-        if (i < order)
+        if (i < degree)
         {
             t.push_back(t_start);
             std::cout << " " << t_s;
             continue;
         }
 
-        if (i > time_point_size - order)
+        if (i > time_point_size - degree)
         {
             t.push_back(t.back());
             std::cout << " " << t_s;
@@ -132,14 +132,14 @@ int main(int argc, char** argv)
     std::cout << "control point vector =";
     for (int i = 0; i < cp_size; i++)
     {
-        if (i < order)
+        if (i < degree)
         {
             cp_1d.push_back(s_cp);
             std::cout << " " << s_cp;
             continue;
         }
 
-        if (i >= cp_size - order)
+        if (i >= cp_size - degree)
         {
             cp_1d.push_back(e_cp);
             std::cout << " " << e_cp;
@@ -157,7 +157,7 @@ int main(int argc, char** argv)
 
     /** @brief testing of check_query_time, find the appropriate time point pair for evaluation**/
     t_p_sc t_s_cqt = system_clock::now();
-    if (!nb.check_query_time(order, t, t_start + milliseconds(1), t_i, time_index_offset))
+    if (!nb.check_query_time(degree, t, t_start + milliseconds(1), t_i, time_index_offset))
     {
         std::cout << "check_query_time fail, query time not inside time vector" << std::endl;
         return -1;
@@ -169,14 +169,14 @@ int main(int argc, char** argv)
     t_p_sc t_s_cgm = system_clock::now();
     vector<double> time_trim;
     std::cout << "time_trim vector test";
-    for (int i = 0; i < k + (order-1); i++)
+    for (int i = 0; i < k + (degree-1); i++)
     {
         double specific_time = duration<double>(t[time_index_offset+i] - t_start).count();
         time_trim.push_back(specific_time);
         std::cout << " " << specific_time;
     }
     std::cout << std::endl;
-    Eigen::MatrixXd m = nb.create_general_m(order, time_trim);
+    Eigen::MatrixXd m = nb.create_general_m(degree, time_trim);
     auto t_cgm = duration<double>(system_clock::now() - t_s_cgm).count();
     std::cout << "create_general_m " << KGRN << t_cgm * 1000 << "ms" << KNRM << std::endl;
     std::cout << m << std::endl;
@@ -198,7 +198,7 @@ int main(int argc, char** argv)
             t_p_sc t_s_gn1 = system_clock::now();
             
             bspline_trajectory::nbs_pva_state_1d state_1d;
-            state_1d = nb.get_nbspline_1d(order, t, cp_1d, now, t_start);
+            state_1d = nb.get_nbspline_1d(degree, t, cp_1d, now, t_start);
             one_d_pos_time.second.push_back(state_1d.pos);
 
             one_d_pos_time.first.push_back(duration<double>(now - t_start).count());
@@ -222,7 +222,7 @@ int main(int argc, char** argv)
     else
     {
         vector<bspline_trajectory::nbs_pva_state_1d> state_1d_vector;
-        state_1d_vector = nb.get_nbspline_1d_all(order, t, cp_1d, run_interval_ms/1000.0, t_start);
+        state_1d_vector = nb.get_nbspline_1d_all(degree, t, cp_1d, run_interval_ms/1000.0, t_start);
         for (auto state_1d : state_1d_vector)
         {
             one_d_pos_time.second.push_back(state_1d.pos);
@@ -259,7 +259,7 @@ int main(int argc, char** argv)
 
     // Just for visualization
     vector<double> t_trim;
-    for(int i = order-1; i < time_point_size - (order-1); i++)
+    for(int i = degree-1; i < time_point_size - (degree-1); i++)
         t_trim.push_back(duration<double>(t[i] - t_start).count());
 
     int plot_segments = 10;
@@ -281,7 +281,7 @@ int main(int argc, char** argv)
     // Enable legend.
     plt::legend();
     
-    string title = std::to_string(order) + " order 1d non-uniform-bspline";
+    string title = std::to_string(degree) + " degree 1d non-uniform-bspline";
     plt::title(title); // add graph title
     plt::show();
 

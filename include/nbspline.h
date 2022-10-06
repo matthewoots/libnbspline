@@ -55,7 +55,7 @@ namespace nbspline
         /** @brief 
          * Calculate position value 
          * @param u is the row vector of position association vector
-         * @param M is the order+1 x order+1 matrix
+         * @param M is the degree+1 x degree+1 matrix
          * @param p is the control points in that segment
          * u * M * p  
         **/
@@ -69,7 +69,7 @@ namespace nbspline
          * Calculate velocity value
          * @param dt knot interval
          * @param du is the row vector of velocity association vector
-         * @param M is the order+1 x order+1 matrix
+         * @param M is the degree+1 x degree+1 matrix
          * @param p is the control points in that segment
          * (1/dt) * du * M * p  
         **/
@@ -83,7 +83,7 @@ namespace nbspline
          * Calculate acceleration value
          * @param dt knot interval
          * @param ddu is the row vector of acceleration association vector
-         * @param M is the order+1 x order+1 matrix
+         * @param M is the degree+1 x degree+1 matrix
          * @param p is the control points in that segment
          * pow((1/dt),2) * ddu * M * p  
         **/
@@ -130,32 +130,32 @@ namespace nbspline
 
         /** @brief Creating Non-uniform Bspline basis M matrix
         * https://xiaoxingchen.github.io/2020/03/02/bspline_in_so3/general_matrix_representation_for_bsplines.pdf
-        * @param order the degree of the spline 
-        * @param t vector of time points, ti-order to ti the number of time points is k+1
-        * etc 5 time points, 4 control points, 3rd order
+        * @param degree the degree of the spline 
+        * @param t vector of time points, t_{i-degree} to t_i the number of time points is k+1
+        * etc 5 time points, 4 control points, 3rd degree
         **/
-        Eigen::MatrixXd create_general_m(int order, vector<double> t);
+        Eigen::MatrixXd create_general_m(int degree, vector<double> t);
 
         /** @brief Find the current pair of knots that we are inbetween of
-         * @param order is used to lower the offset so that we can construct the M matrix according to Kaihuai Qin's formulation
+         * @param degree is used to lower the offset so that we can construct the M matrix according to Kaihuai Qin's formulation
          * @param time is the knot vector that was acquired initially
          * @param query is the current point in time that is being queried 
          * @param t_i (return) the current pair of knots
          * @param off (return) the current offset
         **/
         bool check_query_time(
-            int order, vector<t_p_sc> time, t_p_sc query, std::pair<t_p_sc, t_p_sc>& t_i, int& off);
+            int degree, vector<t_p_sc> time, t_p_sc query, std::pair<t_p_sc, t_p_sc>& t_i, int& off);
 
         /** @brief Create the pva state of a 1d non-uniform bspline from query time
          * This is 1 pass function, does not calculate more that 1 instance in the bspline 
-         * @param order is degree of the spline
+         * @param degree is degree of the spline
          * @param time is the knot vector that was acquired initially
          * @param cp is the vector of control points 
          * @param query_time is the current point in time that is being queried
          * @param start is the start time 
         **/
         nbs_pva_state_1d get_nbspline_1d(
-            int order, vector<t_p_sc> time, vector<double> cp, t_p_sc query_time, t_p_sc start);
+            int degree, vector<t_p_sc> time, vector<double> cp, t_p_sc query_time, t_p_sc start);
 
         /** @brief Create the pva state of a 1d non-uniform bspline from interval
          * This is 1 pass function, does not calculate more that 1 instance in the bspline 
@@ -166,7 +166,7 @@ namespace nbspline
          * @param start is the start time
         **/
         vector<nbs_pva_state_1d> get_nbspline_1d_all(
-            int order, vector<t_p_sc> time, vector<double> cp, double interval, t_p_sc start);
+            int degree, vector<t_p_sc> time, vector<double> cp, double interval, t_p_sc start);
 
         /** @brief Create the pva state of a 1d non-uniform bspline
          * This is with prior calculation of M matrix and u_t and offset
@@ -175,7 +175,7 @@ namespace nbspline
          * @param cp is the vector of control points 
          * @param u_t is current knot factor
          * @param M is basis matrix
-         * @param k is order + 1
+         * @param k is degree + 1
         **/
         nbs_pva_state_1d get_nbspline_1d_w_prior(
             double dt, int time_index_offset, vector<double> cp, double u_t, Eigen::MatrixXd M, int k);
@@ -183,32 +183,32 @@ namespace nbspline
         /** @brief Create the pva state of a 3d non-uniform bspline from a query time
          * This is 1 pass function, does not calculate more that 1 instance in the bspline 
          * Using get_nbspline_1d_w_prior() to save repetition in computation of prior M matrix, u_t and offset 
-         * @param order is degree of the spline
+         * @param degree is degree of the spline
          * @param time is the knot vector that was acquired initially
          * @param cp is the vector of control points in the 3d coordinates
          * @param query_time is the current point in time that is being queried 
          * @param start is the start time
         **/
         nbs_pva_state_3d get_nbspline_3d(
-            int order, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, t_p_sc query_time, t_p_sc start);
+            int degree, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, t_p_sc query_time, t_p_sc start);
 
         /** @brief Create the pva state of a 3d non-uniform bspline from an interval
          * This is 1 pass function, does not calculate more that 1 instance in the bspline 
          * Using get_nbspline_1d_w_prior() to save repetition in computation of prior M matrix, u_t and offset 
-         * @param order is degree of the spline
+         * @param degree is degree of the spline
          * @param time is the knot vector that was acquired initially
          * @param cp is the vector of control points in the 3d coordinates
          * @param interval is the interval used to move forward in time to find all points
          * @param start is the start time
         **/
         vector<nbs_pva_state_3d> get_nbspline_3d_all(
-            int order, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, double interval, t_p_sc start);
+            int degree, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, double interval, t_p_sc start);
 
         /** @brief 
          * Assemble the knot (u) and cp (p) vector for matrix multiplication 
          * @param u_t is current knot factor
          * @param t_i_o is the time_index_offset which is the (floor)time_point index that current time is in
-         * @param k is order + 1 
+         * @param k is degree + 1 
          * @param u (return) the row vector of position association vector
          * @param p (return) the control points in that segment
         **/
@@ -218,7 +218,7 @@ namespace nbspline
 
         /** @brief 
          * Assemble the M matrix, u_t (factor), and dt
-         * @param o is the degree/order
+         * @param d is the degree
          * @param t is the knot vector
          * @param q is the current time
          * @param s is the start time
@@ -228,7 +228,7 @@ namespace nbspline
          * @param t_i_o (return) the time_index_offset which is the (floor)time_point index that current time is in
         **/
         bool assemble_M_ut_dt_matrix(
-            int o, vector<t_p_sc> t, t_p_sc q, t_p_sc s, 
+            int d, vector<t_p_sc> t, t_p_sc q, t_p_sc s, 
             Eigen::MatrixXd& M, double& u_t, double& dt, int& t_i_o);
 
     };

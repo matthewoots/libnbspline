@@ -17,8 +17,8 @@ libnbspline is a header only library, several test examples are compiled using C
 
 **Input:** 
 1. `control_points` in `double` or `Eigen::Vector3d` (size = user input)
-2. `knots` in `vector<td::chrono::time_point<std::chrono::system_clock>>`(size = control point size + order - 1)
-    - control points + knots must be clamped together (with order-1 duplicate of start and end points)
+2. `knots` in `vector<td::chrono::time_point<std::chrono::system_clock>>`(size = control point size + degree - 1)
+    - control points + knots must be clamped together (with degree - 1 duplicate of start and end points)
 
 **Output:**
 1. `time_point` in `std::chrono::time_point<std::chrono::system_clock>`
@@ -30,17 +30,17 @@ libnbspline is a header only library, several test examples are compiled using C
 
 Functions with `get_nbspline_*_all` enables the user to input an interval to generate all points until `knots.back()` while `get_nbspline_*` enables the user to call the position in realtime.
 
-1. get_nbspline_1d_all `vector<nbs_pva_state_1d> get_nbspline_1d_all(int order, vector<t_p_sc> time, vector<double> cp, double interval, t_p_sc start)`
-2. get_nbspline_1d `nbs_pva_state_1d get_nbspline_1d(int order, vector<t_p_sc> time, vector<double> cp, t_p_sc query_time, t_p_sc start)`
+1. get_nbspline_1d_all `vector<nbs_pva_state_1d> get_nbspline_1d_all(int degree, vector<t_p_sc> time, vector<double> cp, double interval, t_p_sc start)`
+2. get_nbspline_1d `nbs_pva_state_1d get_nbspline_1d(int degree, vector<t_p_sc> time, vector<double> cp, t_p_sc query_time, t_p_sc start)`
 3. get_nbspline_1d_w_prior `nbs_pva_state_1d get_nbspline_1d_w_prior(double dt, int time_index_offset, vector<double> cp, double u_t, Eigen::MatrixXd M, int k)`
-4. get_nbspline_3d `nbs_pva_state_3d get_nbspline_3d(int order, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, t_p_sc query_time, t_p_sc start)`
-5. get_nbspline_3d_all `vector<nbs_pva_state_3d> get_nbspline_3d_all(int order, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, double interval, t_p_sc start)`
+4. get_nbspline_3d `nbs_pva_state_3d get_nbspline_3d(int degree, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, t_p_sc query_time, t_p_sc start)`
+5. get_nbspline_3d_all `vector<nbs_pva_state_3d> get_nbspline_3d_all(int degree, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, double interval, t_p_sc start)`
 
 ---
 
 | pos, vel and acc | 3d plot for position |
 | :-: | :-: |
-|[<img src="media/3rd_order_1d_nbspline.png" width="600"/>](media/3rd_order_1d_nbspline.png)|[<img src="media/3rd_order_3d_nbspline.png" width="600"/>](media/3rd_order_3d_nbspline.png)|
+|[<img src="media/3rd_degree_1d_nbspline.png" width="600"/>](media/3rd_degree_1d_nbspline.png)|[<img src="media/3rd_degree_3d_nbspline.png" width="600"/>](media/3rd_degree_3d_nbspline.png)|
 
 ---
 
@@ -62,11 +62,10 @@ make
 - Run `./functionality_3d <argv>` in the `build` folder to test the performance for **3D** and plots out the positions in the 3 axis
 ```bash
 # Time vector represents the ascending time vector (size = cp_size)
-# Control point vector is defined by a clamped vector (order*start_cp ... order*end_cp)
+# Control point vector is defined by a clamped vector ((degree-1)*start_cp ... (degree-1)*end_cp)
 # Relationship is seen in test_functionality.cpp
 time_vector = 0 1.60281 2.9517 4.48911 6.16895 7.25034 8.89521 10.15 12.1304 13.3458 14.9469 16.1748
 control point vector = 1.00648 1.00648 1.00648 -0.999566 -0.158286 -1.81372 -1.50363 0.736339 0.736339 0.736339
-# We only need to evaluate till time_vector[(cp_size-1)-(order-1)], this is the end time = Reason is that the last few values are quite redundant but will be used to evaluate the spline (for the last segment)
 
 # Query whether the time point is within the given time vector and to find the relevant time vector (trimmed) and also the control points that are needed to evaluate the spline
 check_query_time 0.000366ms
@@ -79,7 +78,6 @@ create_general_m 0.003404ms
  0.547267   -1.0853  0.538035         0
 -0.182422  0.522663 -0.511149  0.170908
 
-# Ending time = time_vector[(cp_size-1)-(order-1)]
 total nbspline time: 10.15s
 # And start the real time evaluation until end time
 [7.5e-08] get_nbspline_1d 0.010785ms

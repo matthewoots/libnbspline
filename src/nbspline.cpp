@@ -33,9 +33,9 @@ using namespace std::chrono;
 
 namespace nbspline
 {
-    Eigen::MatrixXd bspline_trajectory::create_general_m(int order, vector<double> t)
+    Eigen::MatrixXd bspline_trajectory::create_general_m(int degree, vector<double> t)
     {
-        int k = order + 1;
+        int k = degree + 1;
         
         Eigen::MatrixXd M = Eigen::MatrixXd::Zero(k,k);
 
@@ -92,7 +92,7 @@ namespace nbspline
     }
 
     bool bspline_trajectory::check_query_time(
-        int order, vector<t_p_sc> time, t_p_sc query, std::pair<t_p_sc, t_p_sc>& t_i, int& off)
+        int degree, vector<t_p_sc> time, t_p_sc query, std::pair<t_p_sc, t_p_sc>& t_i, int& off)
     {
         for (int i = 0; i < (int)time.size()-1; i++)
         {
@@ -104,7 +104,7 @@ namespace nbspline
                 t_i.first = time[i];
                 t_i.second = time[i+1];
                 // off = i;
-                off = i-(order-1);
+                off = i-(degree-1);
                 return true;
             }
         }
@@ -113,25 +113,25 @@ namespace nbspline
     }
 
     bspline_trajectory::nbs_pva_state_1d bspline_trajectory::get_nbspline_1d(
-        int order, vector<t_p_sc> time, vector<double> cp, t_p_sc query_time, t_p_sc start)
+        int degree, vector<t_p_sc> time, vector<double> cp, t_p_sc query_time, t_p_sc start)
     {
         bspline_trajectory::nbs_pva_state_1d s;
-        // According to the paper only able to calculate to order 3
-        if (order > 3)
+        // According to the paper only able to calculate to degree 3 which is order 4
+        if (degree > 3)
             return s;
         if (cp.empty() || time.empty())
             return s;
-        if (time.size() != cp.size() + (order-1))
+        if (time.size() != cp.size() + (degree-1))
         {
             std::cout << KRED << "time vector size not correct!" << KNRM << std::endl;
             return s;
         }
-        int k = order + 1;
+        int k = degree + 1;
         Eigen::MatrixXd M;
         double u_t, dt;
         int time_index_offset;
 
-        if (!assemble_M_ut_dt_matrix(order, time, query_time, start, M, u_t, dt, time_index_offset))
+        if (!assemble_M_ut_dt_matrix(degree, time, query_time, start, M, u_t, dt, time_index_offset))
             return s;
 
         // Control Points in a Span Column vector
@@ -150,15 +150,15 @@ namespace nbspline
     }
 
     vector<bspline_trajectory::nbs_pva_state_1d> bspline_trajectory::get_nbspline_1d_all(
-        int order, vector<t_p_sc> time, vector<double> cp, double interval, t_p_sc start)
+        int degree, vector<t_p_sc> time, vector<double> cp, double interval, t_p_sc start)
     {
         vector<bspline_trajectory::nbs_pva_state_1d> v_s;
-        // According to the paper only able to calculate to order 3
-        if (order > 3)
+        // According to the paper only able to calculate to degree 3 which is order 4
+        if (degree > 3)
             return v_s;
         if (cp.empty() || time.empty())
             return v_s;
-        if (time.size() != cp.size() + (order-1))
+        if (time.size() != cp.size() + (degree-1))
         {
             std::cout << KRED << "time vector size not correct!" << KNRM << std::endl;
             return v_s;
@@ -169,7 +169,7 @@ namespace nbspline
 
         for (int i = 1; i < divisions; i++)
         {
-            int k = order + 1;
+            int k = degree + 1;
             Eigen::MatrixXd M;
             double u_t, dt;
             int time_index_offset;
@@ -178,7 +178,7 @@ namespace nbspline
             
             nbs_pva_state_1d s;
 
-            if (!assemble_M_ut_dt_matrix(order, time, query_time, start, M, u_t, dt, time_index_offset))
+            if (!assemble_M_ut_dt_matrix(degree, time, query_time, start, M, u_t, dt, time_index_offset))
                 return v_s;
 
             // Control Points in a Span Column vector
@@ -217,27 +217,27 @@ namespace nbspline
     }
 
     bspline_trajectory::nbs_pva_state_3d bspline_trajectory::get_nbspline_3d(
-        int order, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, t_p_sc query_time, t_p_sc start)
+        int degree, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, t_p_sc query_time, t_p_sc start)
     {
         nbs_pva_state_3d ss;
         ss.rts = query_time;
 
-        // According to the paper only able to calculate to order 3
-        if (order > 3)
+        // According to the paper only able to calculate to degree 3 which is order 4
+        if (degree > 3)
             return ss;
         if (cp.empty() || time.empty())
             return ss;
-        if (time.size() != cp.size() + (order-1))
+        if (time.size() != cp.size() + (degree-1))
         {
             std::cout << KRED << "time vector size not correct!" << KNRM << std::endl;
             return ss;
         }
-        int k = order + 1;
+        int k = degree + 1;
         Eigen::MatrixXd M;
         double u_t, dt;
         int time_index_offset;
 
-        if (!assemble_M_ut_dt_matrix(order, time, query_time, start, M, u_t, dt, time_index_offset))
+        if (!assemble_M_ut_dt_matrix(degree, time, query_time, start, M, u_t, dt, time_index_offset))
             return ss;
 
         row_vector_3d rv;
@@ -268,21 +268,21 @@ namespace nbspline
     }
 
     vector<bspline_trajectory::nbs_pva_state_3d> bspline_trajectory::get_nbspline_3d_all(
-        int order, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, double interval, t_p_sc start)
+        int degree, vector<t_p_sc> time, vector<Eigen::Vector3d> cp, double interval, t_p_sc start)
     {
         vector<bspline_trajectory::nbs_pva_state_3d> v_ss;
 
-        // According to the paper only able to calculate to order 3
-        if (order > 3)
+        // According to the paper only able to calculate to degree 3 which is order 4
+        if (degree > 3)
             return v_ss;
         if (cp.empty() || time.empty())
             return v_ss;
-        if (time.size() != cp.size() + (order-1))
+        if (time.size() != cp.size() + (degree-1))
         {
             std::cout << KRED << "time vector size not correct!" << KNRM << std::endl;
             return v_ss;
         }
-        int k = order + 1;
+        int k = degree + 1;
 
         row_vector_3d rv;
         // time_point<std::chrono::system_clock> t_s = system_clock::now();
@@ -308,7 +308,7 @@ namespace nbspline
 
             t_p_sc query_time = time.front() + milliseconds(i * (int)round(interval*1000));
 
-            if (!assemble_M_ut_dt_matrix(order, time, query_time, start, M, u_t, dt, time_index_offset))
+            if (!assemble_M_ut_dt_matrix(degree, time, query_time, start, M, u_t, dt, time_index_offset))
                 return v_ss;
             
             ss.rts = query_time;
@@ -352,17 +352,17 @@ namespace nbspline
     }
 
     bool bspline_trajectory::assemble_M_ut_dt_matrix(
-        int o, vector<t_p_sc> t, t_p_sc q, t_p_sc s, 
+        int d, vector<t_p_sc> t, t_p_sc q, t_p_sc s, 
         Eigen::MatrixXd& M, double& u_t, double& dt, int& t_i_o)
     {
-        int k = o + 1;
+        int k = d + 1;
         std::pair<t_p_sc, t_p_sc> t_i;
-        if (!check_query_time(o, t, q, t_i, t_i_o))
+        if (!check_query_time(d, t, q, t_i, t_i_o))
             return false;
 
         vector<double> t_t;
         // std::cout << "time_trim vector";
-        for (int i = 0; i < k + (o - 1); i++)
+        for (int i = 0; i < k + (d - 1); i++)
         {
             double specific_time = duration<double>(t[t_i_o + i] - s).count();
             t_t.push_back(specific_time);
@@ -370,7 +370,7 @@ namespace nbspline
         }
         // std::cout << std::endl;
 
-        M = create_general_m(o, t_t);
+        M = create_general_m(d, t_t);
 
         // u_t = (query_time - t_i.first) / (t_i.second - t_i.first)
         double numerator = duration<double>(q - t_i.first).count();

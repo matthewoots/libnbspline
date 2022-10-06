@@ -72,11 +72,11 @@ int main(int argc, char** argv)
 
     int run_interval_ms = 100;
 
-    int order = 3;
+    int degree = 3;
 
     /** @brief Key components cp_size and time_point_size relationship **/
     int cp_size = 10;
-    int time_point_size = cp_size + (order-1);
+    int time_point_size = cp_size + (degree-1);
 
     if (time_point_size < 0)
         return -1;
@@ -94,14 +94,14 @@ int main(int argc, char** argv)
     
     for (int i = 0; i < time_point_size; i++)
     {
-        if (i < order)
+        if (i < degree)
         {
             t.push_back(t_start);
             std::cout << " " << t_s;
             continue;
         }
 
-        if (i > time_point_size - order)
+        if (i > time_point_size - degree)
         {
             t.push_back(t.back());
             std::cout << " " << t_s;
@@ -134,14 +134,14 @@ int main(int argc, char** argv)
     std::cout << "control point vector" << std::endl;
     for (int i = 0; i < cp_size; i++)
     {
-        if (i < order)
+        if (i < degree)
         {
             cp_3d.push_back(s_cp);
             std::cout << s_cp.transpose() << std::endl;
             continue;
         }
 
-        if (i >= cp_size - order)
+        if (i >= cp_size - degree)
         {
             cp_3d.push_back(e_cp);
             std::cout << e_cp.transpose() << std::endl;
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
             t_p_sc t_s_gn3 = system_clock::now();
 
             bspline_trajectory::nbs_pva_state_3d state_3d;
-            state_3d = nb.get_nbspline_3d(order, t, cp_3d, now, t_start);
+            state_3d = nb.get_nbspline_3d(degree, t, cp_3d, now, t_start);
             three_d_pos_time.second.push_back(state_3d.pos);
 
             three_d_pos_time.first.push_back(duration<double>(now - t_start).count());
@@ -190,7 +190,7 @@ int main(int argc, char** argv)
     else
     {
         vector<bspline_trajectory::nbs_pva_state_3d> state_3d_vector;
-        state_3d_vector = nb.get_nbspline_3d_all(order, t, cp_3d, run_interval_ms/1000.0, t_start);
+        state_3d_vector = nb.get_nbspline_3d_all(degree, t, cp_3d, run_interval_ms/1000.0, t_start);
         for (auto state_3d : state_3d_vector)
         {
             three_d_pos_time.second.push_back(state_3d.pos);
@@ -219,7 +219,7 @@ int main(int argc, char** argv)
 
     // Just for visualization
     vector<double> t_trim;
-    for(int i = order-1; i < time_point_size - (order-1); i++)
+    for(int i = degree-1; i < time_point_size - (degree-1); i++)
         t_trim.push_back(duration<double>(t[i] - t_start).count());
 
     int plot_segments = 10;
@@ -242,7 +242,7 @@ int main(int argc, char** argv)
     // Enable legend.
     plt::legend();
     
-    string title = std::to_string(order) + " order 3d non-uniform-bspline";
+    string title = std::to_string(degree) + " degree 3d non-uniform-bspline";
     plt::title(title); // add graph title
     plt::show();
 
