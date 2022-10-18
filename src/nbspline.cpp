@@ -33,6 +33,97 @@ using namespace std::chrono;
 
 namespace nbspline
 {
+    bool bspline_trajectory::find_nearest_knot(
+        t_p_sc tp, vector<t_p_sc> v, t_p_sc &found, int &index)
+    {
+        for (int i = 0; i < (int)v.size(); i++)
+        {
+            if (duration<double>(tp - v[i]).count() < 0)
+            {
+                if ((i-1) >= 0)
+                {
+                    found = v[i-1];
+                    index = i-1;
+                    return true;
+                }
+                else
+                    return false;
+            }
+        }
+
+        return false;
+    }
+
+    void bspline_trajectory::distribute_3d_control_points(
+        int degree, Eigen::Vector3d p, vector<Eigen::Vector3d> wp, 
+        double m_v, double k_s, vector<double> &time_waypoint,
+        vector<Eigen::Vector3d> &control_points)
+    {
+        double est_dist_knot = m_v * k_s;
+        // std::cout << "est_dist_knot = " << est_dist_knot << std::endl;
+
+        // Add current position into the waypoint list
+        vector<Eigen::Vector3d> tmp = wp;
+        tmp.insert(tmp.begin(), p);
+        
+        vector<double> seg_dist;
+        vector<int> seg_size;
+        vector<Eigen::Vector3d> seg_vect;
+        int total_segment = 0;
+        
+        for (int i = 0; i < (int)tmp.size() - 1; i++)
+        {
+            seg_dist.push_back((tmp[i+1] - tmp[i]).norm());
+            seg_vect.push_back((tmp[i+1] - tmp[i]).normalized());
+        }
+        
+        int number_of_segments = (int)seg_dist.size();
+
+        for (int i = 0; i < number_of_segments; i++)
+        {
+            // ceil helps to push values above 0 to 1 or more
+            // or else segment count is 0 and causes an error
+            int knots_in_seg = (int)floor(seg_dist[i]/est_dist_knot);
+            total_segment += knots_in_seg;
+            
+            seg_size.push_back(knots_in_seg);
+        }
+
+        control_points.push_back(p);
+        time_waypoint.push_back(0.0);
+        int count = 0;
+        for (int i = 0; i < number_of_segments; i++)
+        {
+            if (seg_size[i] > 0)
+            {
+                for (int j = 0; j < seg_size[i]; j++)
+                {
+                    count += 1;
+                    time_waypoint.push_back(count * k_s);
+                    control_points.push_back(
+                        tmp[i] + (j+1) * seg_vect[i] * est_dist_knot);
+                }
+            }
+            
+            count += 1;
+            time_waypoint.push_back(count * k_s);
+            control_points.push_back(tmp[i+1]);
+        }
+
+        // for (int i = 0; i < (int)control_points.size(); i++)
+        //     std::cout << control_points[i].transpose() << " ";
+        // std:cout << std::endl;
+
+        // Since the relationship of time_point_size and cp_size is cp_size + (degree-1)
+        // for (int i = 0; i < (degree-1); i++)
+        // {
+        //     int last_index = time_waypoint.size()-1;
+        //     time_waypoint.push_back(last_index + k_s);
+        // }
+
+        return;
+    }
+
     Eigen::MatrixXd bspline_trajectory::create_general_m(int degree, vector<double> t)
     {
         int k = degree + 1;
@@ -226,7 +317,10 @@ namespace nbspline
         if (degree > 3)
             return ss;
         if (cp.empty() || time.empty())
+        {
+            std::cout << KRED << "cp and time vector empty!" << KNRM << std::endl;
             return ss;
+        }
         if (time.size() != cp.size() + (degree-1))
         {
             std::cout << KRED << "time vector size not correct!" << KNRM << std::endl;
@@ -238,7 +332,10 @@ namespace nbspline
         int time_index_offset;
 
         if (!assemble_M_ut_dt_matrix(degree, time, query_time, start, M, u_t, dt, time_index_offset))
+        {
+            std::cout << KRED << "Cannot assemble time du matrix!" << KNRM << std::endl;
             return ss;
+        }
 
         row_vector_3d rv;
         // time_point<std::chrono::system_clock> t_s = system_clock::now();
@@ -358,7 +455,10 @@ namespace nbspline
         int k = d + 1;
         std::pair<t_p_sc, t_p_sc> t_i;
         if (!check_query_time(d, t, q, t_i, t_i_o))
+        {
+            std::cout << KRED << "query not inside time vector = " << duration<double>(q - t[t.size()-1]).count() << KNRM << std::endl;
             return false;
+        }
 
         vector<double> t_t;
         // std::cout << "time_trim vector";

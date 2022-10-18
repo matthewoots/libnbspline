@@ -128,6 +128,29 @@ namespace nbspline
             vector<double> zcp; // z control point
         };
 
+        /** @brief Find the corresponding knot in vector
+        * @param tp query this time point
+        * @param v vector of time points
+        * @param found found time point in the vector
+        * @param index index of the found time point
+        **/
+        bool find_nearest_knot(
+            t_p_sc tp, vector<t_p_sc> v, t_p_sc &found, int &index);
+
+        /** @brief Distribution of control points
+        * @param degree the degree of the spline
+        * @param p the degree of the spline 
+        * @param wp vector of time points, t_{i-degree} to t_i the number of time points is k+1
+        * @param m_v vector of time points, t_{i-degree} to t_i the number of time points is k+1
+        * @param k_s vector of time points, t_{i-degree} to t_i the number of time points is k+1
+        * @param time_waypoint vector of time points, t_{i-degree} to t_i the number of time points is k+1
+        * @param control_points vector of time points, t_{i-degree} to t_i the number of time points is k+1
+        **/
+        void distribute_3d_control_points(
+            int degree, Eigen::Vector3d p, vector<Eigen::Vector3d> wp, 
+            double m_v, double k_s, vector<double> &time_waypoint,
+            vector<Eigen::Vector3d> &control_points);
+
         /** @brief Creating Non-uniform Bspline basis M matrix
         * https://xiaoxingchen.github.io/2020/03/02/bspline_in_so3/general_matrix_representation_for_bsplines.pdf
         * @param degree the degree of the spline 

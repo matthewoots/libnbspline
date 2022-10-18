@@ -24,6 +24,9 @@ include(CTest)
 
 # Add nbspline library
 add_library(nbspline src/nbspline.cpp)
+target_include_directories (nbspline PUBLIC 
+    ${PROJECT_SOURCE_DIR} 
+    ${PROJECT_SOURCE_DIR}/include)
 
 add_executable(functionality_1d src/test_functionality_1d.cpp)
 add_test(functionality_1d functionality_1d)
